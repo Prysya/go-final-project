@@ -72,7 +72,7 @@ func handleCreateTask(w http.ResponseWriter, r *http.Request, repo *repository.T
 	} else {
 		_, err := time.Parse(constants.DateFormat, task.Date)
 		if err != nil {
-			writeJSONError(w, fmt.Sprintf("Дата представлена в формате, отличном от %s", constants.DateFormat), http.StatusBadRequest)
+			writeJSONError(w, fmt.Sprintf("Дата представлена в формате, отличном от %d", constants.DateFormat), http.StatusBadRequest)
 			return
 		}
 	}
