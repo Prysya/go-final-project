@@ -27,26 +27,27 @@ func NextDateHandler(w http.ResponseWriter, r *http.Request) {
 		var err error
 		now, err = time.Parse(constants.DateFormat, nowStr)
 		if err != nil {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.Write([]byte(""))
+			writeData(w, "")
 			return
 		}
 	}
 
 	if dateStr == "" || repeatStr == "" {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Write([]byte(""))
+		writeData(w, "")
 		return
 	}
 
 	nextDate, err := api.NextDate(now, dateStr, repeatStr)
 	if err != nil {
 		fmt.Printf("Ошибка NextDate: %v\n", err)
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Write([]byte(""))
+		writeData(w, "")
 		return
 	}
 
+	writeData(w, nextDate)
+}
+
+func writeData(w http.ResponseWriter, data string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte(nextDate))
+	w.Write([]byte(data))
 }
