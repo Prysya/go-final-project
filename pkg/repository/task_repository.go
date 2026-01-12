@@ -180,3 +180,29 @@ func (r *TaskRepository) Migrate() error {
 
 	return nil
 }
+
+func (r *TaskRepository) GetTasksWithLimit(limit int) ([]*models.Task, error) {
+	query := `select id, date, title, comment, repeat from scheduler order by date limit ?`
+
+	rows, err := r.db.Query(query, limit)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка получения задач с лимитом: %w", err)
+	}
+	defer rows.Close()
+
+	var tasks []*models.Task
+	for rows.Next() {
+		var task models.Task
+		err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка сканирования задачи: %w", err)
+		}
+		tasks = append(tasks, &task)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("ошибка итерации по задачам: %w", err)
+	}
+
+	return tasks, nil
+}

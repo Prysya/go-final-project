@@ -54,7 +54,8 @@ func CreateServer(logger *log.Logger) *Server {
 
 	router.Handle("/", handlers.GetFileServerHandler())
 	router.HandleFunc("/api/nextdate", handlers.NextDateHandler)
-	router.HandleFunc("/api/task", handlers.TasksHandler)
+	router.HandleFunc("/api/task", handlers.TaskHandler)
+	router.HandleFunc("/api/tasks", handlers.TasksHandler)
 
 	httpServer := &http.Server{
 		Addr:         config.Port,
