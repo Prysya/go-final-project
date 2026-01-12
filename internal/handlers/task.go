@@ -31,9 +31,75 @@ func TaskHandler(w http.ResponseWriter, r *http.Request) {
 		handleCreateTask(w, r, repo)
 	case http.MethodPut:
 		handleUpdateTask(w, r, repo)
+	case http.MethodDelete:
+		handleDeleteTask(w, r, repo)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func TaskDoneHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	repo, err := repository.NewTaskRepository()
+	if err != nil {
+		api.WriteJSONError(w, "Ошибка базы данных", http.StatusInternalServerError)
+		return
+	}
+
+	handleTaskDone(w, r, repo)
+}
+
+func handleTaskDone(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		api.WriteJSONError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		api.WriteJSONError(w, "Некорректный идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	task, err := repo.GetByID(id)
+	if err != nil {
+		api.WriteJSONError(w, "Ошибка получения задачи", http.StatusInternalServerError)
+		return
+	}
+
+	if task == nil {
+		api.WriteJSONError(w, "Задача не найдена", http.StatusNotFound)
+		return
+	}
+
+	if task.Repeat == "" {
+		err = repo.Delete(id)
+		if err != nil {
+			api.WriteJSONError(w, "Ошибка удаления задачи: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else {
+		now := time.Now()
+		nextDate, err := api.NextDate(now, task.Date, task.Repeat)
+		if err != nil {
+			api.WriteJSONError(w, "Ошибка расчета следующей даты: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		task.Date = nextDate
+		err = repo.Update(task)
+		if err != nil {
+			api.WriteJSONError(w, "Ошибка обновления даты задачи: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	api.SendJSON(w, http.StatusOK, map[string]interface{}{})
 }
 
 func handleGetTaskByID(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
@@ -220,4 +286,30 @@ func handleUpdateTask(w http.ResponseWriter, r *http.Request, repo *repository.T
 	response := map[string]interface{}{}
 
 	api.SendJSON(w, http.StatusOK, response)
+}
+
+func handleDeleteTask(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
+	idStr := r.URL.Query().Get("id")
+	if idStr == "" {
+		api.WriteJSONError(w, "Не указан идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		api.WriteJSONError(w, "Некорректный идентификатор", http.StatusBadRequest)
+		return
+	}
+
+	err = repo.Delete(id)
+	if err != nil {
+		if err.Error() == fmt.Sprintf("задача с ID %d не найдена", id) {
+			api.WriteJSONError(w, "Задача не найдена", http.StatusNotFound)
+		} else {
+			api.WriteJSONError(w, "Ошибка удаления задачи: "+err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	api.SendJSON(w, http.StatusOK, map[string]interface{}{})
 }
