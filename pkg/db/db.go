@@ -39,7 +39,7 @@ func Init(dbFile string) error {
 	}
 
 	if !fileExists {
-		log.Printf("File %s not found, creating new database", dbFile)
+		log.Printf("Файл %s не найден, создаем новую базу данных", dbFile)
 		if _, err = db.Exec(schema); err != nil {
 			return fmt.Errorf("failed to create scheduler table: %w", err)
 		}
