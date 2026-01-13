@@ -31,22 +31,22 @@ func Init(dbFile string) error {
 
 	db, err = sql.Open("sqlite", dbFile)
 	if err != nil {
-		return fmt.Errorf("ошибка открытия базы данных: %w", err)
+		return fmt.Errorf("failed to open database: %w", err)
 	}
 
 	if err = db.Ping(); err != nil {
-		return fmt.Errorf("ошибка подключения к базе данных: %w", err)
+		return fmt.Errorf("failed to connect to database: %w", err)
 	}
 
 	if !fileExists {
-		log.Printf("Файл %s не найден, создаем новую базу данных", dbFile)
+		log.Printf("File %s not found, creating new database", dbFile)
 		if _, err = db.Exec(schema); err != nil {
-			return fmt.Errorf("ошибка создания таблицы scheduler: %w", err)
+			return fmt.Errorf("failed to create scheduler table: %w", err)
 		}
 		log.Println("Таблица scheduler успешно создана")
 	} else {
 		if _, err = db.Exec(schema); err != nil {
-			return fmt.Errorf("ошибка проверки таблицы scheduler: %w", err)
+			return fmt.Errorf("failed to verify scheduler table: %w", err)
 		}
 		log.Printf("База данных %s уже существует", dbFile)
 	}

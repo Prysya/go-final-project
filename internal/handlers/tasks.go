@@ -13,24 +13,44 @@ type TasksResp struct {
 	Tasks []*models.Task `json:"tasks"`
 }
 
-func TasksHandler(w http.ResponseWriter, r *http.Request) {
-	repo, err := repository.NewTaskRepository()
-	if err != nil {
-		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
-		return
-	}
+const DefaultTaskLimit = 50
 
-	switch r.Method {
-	case http.MethodGet:
-		handleGetTasksWithLimit(w, r, repo)
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
+func TasksHandler(repo *repository.TaskRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			handleGetTasksCollection(w, r, repo)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
 	}
 }
 
-func handleGetTasksWithLimit(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
-	limitStr := r.URL.Query().Get("limit")
-	limit := 50
+func handleGetTasksCollection(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
+	query := r.URL.Query()
+	date := query.Get("date")
+
+	if date != "" {
+		// Обработка запроса с датой
+		handleGetTasksByDate(w, date, repo)
+	} else {
+		// Обработка запроса без даты (с лимитом или без)
+		handleGetTasksWithLimit(w, query.Get("limit"), repo)
+	}
+}
+
+func handleGetTasksByDate(w http.ResponseWriter, date string, repo *repository.TaskRepository) {
+	tasks, err := repo.GetByDate(date)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	api.SendJSON(w, http.StatusOK, tasks)
+}
+
+func handleGetTasksWithLimit(w http.ResponseWriter, limitStr string, repo *repository.TaskRepository) {
+	limit := DefaultTaskLimit
 
 	if limitStr != "" {
 		parsedLimit, err := strconv.Atoi(limitStr)

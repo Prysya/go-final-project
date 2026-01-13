@@ -11,17 +11,17 @@ import (
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	if repeat == "" {
-		return "", errors.New("пустое правило повторения")
+		return "", errors.New("empty repeat rule")
 	}
 
 	startDate, err := time.Parse(constants.DateFormat, dstart)
 	if err != nil {
-		return "", errors.New("неверный формат начальной даты")
+		return "", errors.New("invalid start date format")
 	}
 
 	parts := strings.Fields(repeat)
 	if len(parts) == 0 {
-		return "", errors.New("неверный формат правила")
+		return "", errors.New("invalid rule format")
 	}
 
 	cmd := parts[0]
@@ -37,22 +37,22 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	case "m":
 		return handleMonthlyRule(now, startDate, args)
 	default:
-		return "", errors.New("неподдерживаемый формат правила")
+		return "", errors.New("unsupported rule format")
 	}
 }
 
 func handleDailyRule(now, startDate time.Time, args []string) (string, error) {
 	if len(args) != 1 {
-		return "", errors.New("неверный формат для правила 'd'")
+		return "", errors.New("invalid format for 'd' rule")
 	}
 
 	interval, err := strconv.Atoi(args[0])
 	if err != nil {
-		return "", errors.New("неверный интервал дней")
+		return "", errors.New("invalid day interval")
 	}
 
 	if interval <= 0 || interval > 400 {
-		return "", errors.New("интервал дней должен быть от 1 до 400")
+		return "", errors.New("day interval must be between 1 and 400")
 	}
 
 	date := startDate
@@ -69,7 +69,7 @@ func handleDailyRule(now, startDate time.Time, args []string) (string, error) {
 
 func handleYearlyRule(now, startDate time.Time, args []string) (string, error) {
 	if len(args) != 0 {
-		return "", errors.New("правило 'y' не принимает аргументов")
+		return "", errors.New("'y' rule does not accept arguments")
 	}
 
 	date := startDate
@@ -94,7 +94,7 @@ func handleYearlyRule(now, startDate time.Time, args []string) (string, error) {
 
 func handleWeeklyRule(now, startDate time.Time, args []string) (string, error) {
 	if len(args) != 1 {
-		return "", errors.New("неверный формат для правила 'w'")
+		return "", errors.New("invalid format for 'w' rule")
 	}
 
 	daysStr := strings.Split(args[0], ",")
@@ -103,13 +103,13 @@ func handleWeeklyRule(now, startDate time.Time, args []string) (string, error) {
 	for _, dayStr := range daysStr {
 		day, err := strconv.Atoi(dayStr)
 		if err != nil || day < 1 || day > 7 {
-			return "", errors.New("дни недели должны быть от 1 до 7")
+			return "", errors.New("week days must be between 1 and 7")
 		}
 		weekdays[day] = true
 	}
 
 	if len(weekdays) == 0 {
-		return "", errors.New("не указаны дни недели")
+		return "", errors.New("no week days specified")
 	}
 
 	date := startDate
@@ -132,7 +132,7 @@ func handleWeeklyRule(now, startDate time.Time, args []string) (string, error) {
 		searchDate = searchDate.AddDate(0, 0, 1)
 	}
 
-	return "", errors.New("не удалось найти подходящую дату")
+	return "", errors.New("failed to find suitable date")
 }
 
 func isValidWeekday(date time.Time, weekdays map[int]bool) bool {
@@ -145,7 +145,7 @@ func isValidWeekday(date time.Time, weekdays map[int]bool) bool {
 
 func handleMonthlyRule(now, startDate time.Time, args []string) (string, error) {
 	if len(args) < 1 || len(args) > 2 {
-		return "", errors.New("неверный формат для правила 'm'")
+		return "", errors.New("invalid format for 'm' rule")
 	}
 
 	daysStr := strings.Split(args[0], ",")
@@ -154,10 +154,10 @@ func handleMonthlyRule(now, startDate time.Time, args []string) (string, error) 
 	for _, dayStr := range daysStr {
 		day, err := strconv.Atoi(dayStr)
 		if err != nil {
-			return "", errors.New("неверный формат дня месяца")
+			return "", errors.New("invalid day of month format")
 		}
 		if (day < -2 || day == 0 || day > 31) && day != -1 {
-			return "", errors.New("день месяца должен быть от -2 до 31, кроме 0")
+			return "", errors.New("day of month must be between -2 and 31, excluding 0")
 		}
 		dayRules = append(dayRules, day)
 	}
@@ -168,7 +168,7 @@ func handleMonthlyRule(now, startDate time.Time, args []string) (string, error) 
 		for _, monthStr := range monthsStr {
 			month, err := strconv.Atoi(monthStr)
 			if err != nil || month < 1 || month > 12 {
-				return "", errors.New("месяцы должны быть от 1 до 12")
+				return "", errors.New("months must be between 1 and 12")
 			}
 			monthRules[month] = true
 		}
@@ -192,7 +192,7 @@ func handleMonthlyRule(now, startDate time.Time, args []string) (string, error) 
 		searchDate = searchDate.AddDate(0, 0, 1)
 	}
 
-	return "", errors.New("не удалось найти подходящую дату")
+	return "", errors.New("failed to find suitable date")
 }
 
 func isValidMonthlyDate(date time.Time, dayRules []int, monthRules map[int]bool) bool {

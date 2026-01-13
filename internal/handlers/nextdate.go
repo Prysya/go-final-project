@@ -49,5 +49,8 @@ func NextDateHandler(w http.ResponseWriter, r *http.Request) {
 
 func writeData(w http.ResponseWriter, data string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte(data))
+	_, err := w.Write([]byte(data))
+	if err != nil {
+		fmt.Printf("Ошибка записи ответа: %v\n", err)
+	}
 }

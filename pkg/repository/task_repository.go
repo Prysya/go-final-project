@@ -2,6 +2,7 @@ package repository
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/Prysya/go-final-project/pkg/db"
@@ -15,7 +16,7 @@ type TaskRepository struct {
 func NewTaskRepository() (*TaskRepository, error) {
 	database := db.GetDB()
 	if database == nil {
-		return nil, fmt.Errorf("база данных не инициализирована")
+		return nil, fmt.Errorf("database not initialized")
 	}
 	return &TaskRepository{db: database}, nil
 }
@@ -25,12 +26,12 @@ func (r *TaskRepository) Create(task *models.Task) (int64, error) {
 
 	result, err := r.db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat)
 	if err != nil {
-		return 0, fmt.Errorf("ошибка создания задачи: %w", err)
+		return 0, fmt.Errorf("failed to create task: %w", err)
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil {
-		return 0, fmt.Errorf("ошибка получения ID созданной задачи: %w", err)
+		return 0, fmt.Errorf("failed to get created task ID: %w", err)
 	}
 
 	return id, nil
@@ -47,7 +48,7 @@ func (r *TaskRepository) GetByID(id int) (*models.Task, error) {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("ошибка получения задачи: %w", err)
+		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 
 	return &task, nil
@@ -58,7 +59,7 @@ func (r *TaskRepository) GetAll() ([]models.Task, error) {
 
 	rows, err := r.db.Query(query)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка получения задач: %w", err)
+		return nil, fmt.Errorf("failed to get tasks: %w", err)
 	}
 	defer rows.Close()
 
@@ -67,13 +68,13 @@ func (r *TaskRepository) GetAll() ([]models.Task, error) {
 		var task models.Task
 		err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка сканирования задачи: %w", err)
+			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка итерации по задачам: %w", err)
+		return nil, fmt.Errorf("failed to iterate tasks: %w", err)
 	}
 
 	return tasks, nil
@@ -81,14 +82,14 @@ func (r *TaskRepository) GetAll() ([]models.Task, error) {
 
 func (r *TaskRepository) GetByDate(date string) ([]models.Task, error) {
 	if !models.IsValidDate(date) {
-		return nil, fmt.Errorf("некорректный формат даты: %s", date)
+		return nil, fmt.Errorf("invalid date format: %s", date)
 	}
 
 	query := `select id, date, title, comment, repeat from scheduler where date = ? order by id`
 
 	rows, err := r.db.Query(query, date)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка получения задач по дате: %w", err)
+		return nil, fmt.Errorf("failed to get tasks by date: %w", err)
 	}
 	defer rows.Close()
 
@@ -97,13 +98,13 @@ func (r *TaskRepository) GetByDate(date string) ([]models.Task, error) {
 		var task models.Task
 		err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка сканирования задачи: %w", err)
+			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
 		tasks = append(tasks, task)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка итерации по задачам: %w", err)
+		return nil, fmt.Errorf("failed to iterate tasks: %w", err)
 	}
 
 	return tasks, nil
@@ -114,16 +115,16 @@ func (r *TaskRepository) Update(task *models.Task) error {
 
 	result, err := r.db.Exec(query, task.Date, task.Title, task.Comment, task.Repeat, task.ID)
 	if err != nil {
-		return fmt.Errorf("ошибка обновления задачи: %w", err)
+		return fmt.Errorf("failed to update task: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("ошибка проверки обновления: %w", err)
+		return fmt.Errorf("failed to check update: %w", err)
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("задача с ID %d не найдена", task.ID)
+		return fmt.Errorf("task with ID %d not found", task.ID)
 	}
 
 	return nil
@@ -134,16 +135,16 @@ func (r *TaskRepository) Delete(id int) error {
 
 	result, err := r.db.Exec(query, id)
 	if err != nil {
-		return fmt.Errorf("ошибка удаления задачи: %w", err)
+		return fmt.Errorf("failed to delete task: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("ошибка проверки удаления: %w", err)
+		return fmt.Errorf("failed to check deletion: %w", err)
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("задача с ID %d не найдена", id)
+		return fmt.Errorf("task with ID %d not found", id)
 	}
 
 	return nil
@@ -151,19 +152,19 @@ func (r *TaskRepository) Delete(id int) error {
 
 func (r *TaskRepository) DeleteByDate(date string) (int64, error) {
 	if !models.IsValidDate(date) {
-		return 0, fmt.Errorf("некорректный формат даты: %s", date)
+		return 0, fmt.Errorf("invalid date format: %s", date)
 	}
 
 	query := `delete from scheduler where date = ?`
 
 	result, err := r.db.Exec(query, date)
 	if err != nil {
-		return 0, fmt.Errorf("ошибка удаления задач по дате: %w", err)
+		return 0, fmt.Errorf("failed to delete tasks by date: %w", err)
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return 0, fmt.Errorf("ошибка проверки удаления: %w", err)
+		return 0, fmt.Errorf("failed to check deletion: %w", err)
 	}
 
 	return rowsAffected, nil
@@ -174,19 +175,19 @@ func (r *TaskRepository) Migrate() error {
 
 	var tableName string
 	err := r.db.QueryRow(query).Scan(&tableName)
-	if err != nil && err != sql.ErrNoRows {
-		return fmt.Errorf("ошибка проверки таблицы: %w", err)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("failed to check table: %w", err)
 	}
 
 	return nil
 }
 
 func (r *TaskRepository) GetTasksWithLimit(limit int) ([]*models.Task, error) {
-	query := `select id, date, title, comment, repeat from scheduler order by date limit ?`
+	query := `select id, date, title, comment, repeat from scheduler order by date LIMIT ?`
 
 	rows, err := r.db.Query(query, limit)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка получения задач с лимитом: %w", err)
+		return nil, fmt.Errorf("failed to get tasks with limit: %w", err)
 	}
 	defer rows.Close()
 
@@ -195,13 +196,13 @@ func (r *TaskRepository) GetTasksWithLimit(limit int) ([]*models.Task, error) {
 		var task models.Task
 		err := rows.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка сканирования задачи: %w", err)
+			return nil, fmt.Errorf("failed to scan task: %w", err)
 		}
 		tasks = append(tasks, &task)
 	}
 
 	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("ошибка итерации по задачам: %w", err)
+		return nil, fmt.Errorf("failed to iterate tasks: %w", err)
 	}
 
 	return tasks, nil

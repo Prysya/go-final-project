@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Prysya/go-final-project/internal/handlers"
 	"github.com/Prysya/go-final-project/pkg/db"
+	"github.com/Prysya/go-final-project/pkg/repository"
 )
 
 type Server struct {
@@ -51,12 +53,16 @@ func CreateServer(logger *log.Logger) *Server {
 	}
 
 	router := http.NewServeMux()
+	taskRepo, err := repository.NewTaskRepository()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	router.Handle("/", handlers.GetFileServerHandler())
 	router.HandleFunc("/api/nextdate", handlers.NextDateHandler)
-	router.HandleFunc("/api/task", handlers.TaskHandler)
-	router.HandleFunc("/api/task/done", handlers.TaskDoneHandler)
-	router.HandleFunc("/api/tasks", handlers.TasksHandler)
+	router.HandleFunc("/api/task", handlers.TaskHandler(taskRepo))
+	router.HandleFunc("/api/task/done", handlers.TaskDoneHandler(taskRepo))
+	router.HandleFunc("/api/tasks", handlers.TasksHandler(taskRepo))
 
 	httpServer := &http.Server{
 		Addr:         config.Port,
@@ -78,7 +84,18 @@ func (s *Server) Start() error {
 	return s.server.ListenAndServe()
 }
 
-func (s *Server) Stop() error {
-	db.Close()
-	return s.server.Close()
+func (s *Server) Stop(ctx context.Context) error {
+	s.logger.Println("Останавливаем сервер...")
+
+	if err := s.server.Shutdown(ctx); err != nil {
+		s.logger.Printf("Ошибка при остановке HTTP сервера: %v", err)
+		s.server.Close()
+	}
+
+	if err := db.Close(); err != nil {
+		s.logger.Printf("Ошибка при закрытии БД: %v", err)
+		return err
+	}
+
+	return nil
 }

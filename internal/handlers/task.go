@@ -13,44 +13,32 @@ import (
 	"github.com/Prysya/go-final-project/pkg/repository"
 )
 
-func TaskHandler(w http.ResponseWriter, r *http.Request) {
-	repo, err := repository.NewTaskRepository()
-	if err != nil {
-		http.Error(w, "Ошибка базы данных", http.StatusInternalServerError)
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		if r.URL.Query().Get("id") != "" {
+func TaskHandler(repo *repository.TaskRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
 			handleGetTaskByID(w, r, repo)
-		} else {
-			handleGetTasks(w, r, repo)
+		case http.MethodPost:
+			handleCreateTask(w, r, repo)
+		case http.MethodPut:
+			handleUpdateTask(w, r, repo)
+		case http.MethodDelete:
+			handleDeleteTask(w, r, repo)
+		default:
+			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
-	case http.MethodPost:
-		handleCreateTask(w, r, repo)
-	case http.MethodPut:
-		handleUpdateTask(w, r, repo)
-	case http.MethodDelete:
-		handleDeleteTask(w, r, repo)
-	default:
-		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
 
-func TaskDoneHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+func TaskDoneHandler(repo *repository.TaskRepository) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
 
-	repo, err := repository.NewTaskRepository()
-	if err != nil {
-		api.WriteJSONError(w, "Ошибка базы данных", http.StatusInternalServerError)
-		return
+		handleTaskDone(w, r, repo)
 	}
-
-	handleTaskDone(w, r, repo)
 }
 
 func handleTaskDone(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
@@ -128,27 +116,6 @@ func handleGetTaskByID(w http.ResponseWriter, r *http.Request, repo *repository.
 
 	api.SendJSON(w, http.StatusOK, task)
 
-}
-
-func handleGetTasks(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
-	date := r.URL.Query().Get("date")
-
-	var tasks []models.Task
-	var err error
-
-	if date != "" {
-		tasks, err = repo.GetByDate(date)
-	} else {
-		api.WriteJSONError(w, "Не указан параметр запроса date", http.StatusBadRequest)
-		return
-	}
-
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	api.SendJSON(w, http.StatusOK, tasks)
 }
 
 func handleCreateTask(w http.ResponseWriter, r *http.Request, repo *repository.TaskRepository) {
